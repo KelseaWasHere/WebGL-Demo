@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triangle Trouble</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <center>
+        <canvas id="webgl-canvas" width="400" height="400"></canvas>
+
+        <label for="rendering-mode">Select Rendering Style:</label>
+        <select id="rendering-mode" onchange="changeRenderingMode(this.value)">
+            <option value="0">TRIANGLES</option>
+            <option value="1">TRIANGLE STRIP</option>
+            <option value="2">TRIANGLE FAN</option>
+        </select>
+    </center>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const canvas = document.getElementById("webgl-canvas");
+            const gl = canvas.getContext("webgl");
+            if (!gl) {
+                console.error("Unable to initialize WebGL. Your browser may not support it.");
+                return;
+            }
+
+            const vertexShaderSource = `
+                attribute vec2 position;
+                void main() {
+                    gl_Position = vec4(position, 0.0, 1.0);
+                }
+            `;
+
+            const fragmentShaderSource = `
+                precision mediump float;
+                uniform vec4 color;
+                void main() {
+                    gl_FragColor = color;
+                }
+            `;
+
+            const vertexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                0.0, 0.5,
+                1.0, 0.5,
+                0.5, 1.0,
+                0.5, 0.0,
+                0.0, -1.0,
+                -0.5, 0.0,
+            ]), gl.STATIC_DRAW);
+
+            const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vertexShader, vertexShaderSource);
+            gl.compileShader(vertexShader);
+
+            const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fragmentShader, fragmentShaderSource);
+            gl.compileShader(fragmentShader);
+
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+            gl.useProgram(shaderProgram);
+
+            const positionAttribLocation = gl.getAttribLocation(shaderProgram, "position");
+            gl.vertexAttribPointer(positionAttribLocation, 2, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(positionAttribLocation);
+
+            const colorUniformLocation = gl.getUniformLocation(shaderProgram, "color");
+
+            // Main Class
+            class ObjectRenderer {
+                constructor() {
+                    this.renderingMode = 0;
+                    this.color = [0, 0, 1, 1];
+                }
+
+                render() {
+                    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                    gl.uniform4fv(colorUniformLocation, this.color);
+
+                    switch (this.renderingMode) {
+                        case 0:
+                            gl.drawArrays(gl.TRIANGLES, 0, 6);
+                            break;
+                        case 1:
+                            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 6);
+                            break;
+                        case 2:
+                            gl.drawArrays(gl.TRIANGLE_FAN, 0, 6);
+                            break;
+                        default:
+                            console.error("Invalid rendering mode");
+                    }
+                }
+
+                setRenderingMode(mode) {
+                    this.renderingMode = parseInt(mode);
+                    this.render();
+                }
+            }
+
+            const objectRenderer = new ObjectRenderer();
+            objectRenderer.render();
+
+            // Global function for dropdown change
+            window.changeRenderingMode = function (mode) {
+                objectRenderer.setRenderingMode(mode);
+            };
+        });
+    </script>
+</body>
+</html>
